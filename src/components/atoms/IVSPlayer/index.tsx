@@ -21,16 +21,15 @@ const Wrapper = styled.div`
 
 // 디폴트 playback url
 const defaultPlaybackUrl =
-  "https://fcc3ddae59ed.us-west-2.playback.live-video.net/api/video/v1/us-west-2.893648527354.channel.DmumNckWFTqz.m3u8";
+  "https://streamcdnin.getloconow.com/FJ1S9MARFN_daf806fb-c4d0-4eed-bf7e-4787d9654045/rewind.m3u8";
 
 export interface IVSPlayerProps {
   /** IVS Playback URL */
   src?: string;
   /** quiz 메타데이터가 도달하면 이를 핸들링하는 함수 */
-  handleQuizEvent?: (cue: TextMetadataCue) => void;
 }
 
-function IVSPlayer({ src, handleQuizEvent }: IVSPlayerProps) {
+function IVSPlayer({ src  }: IVSPlayerProps) {
   useEffect(() => {
     // 로드할 source stream 을 지정합니다. Prop 으로 받은 src 로 설정하거나 존재하지 않으면 기본 url 로 설정합니다(필수 아님).
     const PLAYBACK_URL = src ?? defaultPlaybackUrl;
@@ -44,6 +43,8 @@ function IVSPlayer({ src, handleQuizEvent }: IVSPlayerProps) {
     /**
      * 플레이어를 초기화하고 instantiate 합니다.
      */
+
+
     const player = videojs(
       // 플레이어에 연동될 video 태그의 id
       "amazon-ivs-videojs",
@@ -62,6 +63,24 @@ function IVSPlayer({ src, handleQuizEvent }: IVSPlayerProps) {
 
     // 위에서 등록한 플러그인을 enable 시켜주어야 UI 버튼들이 나타납니다.
     player.enableIVSQualityPlugin();
+
+
+
+    const seekBarHtml = `
+    <input id="seekbar-range" type="range" value="38" />
+`
+
+    //adding a custom Element
+    const seekBar = document.createElement('div')
+    seekBar.className = 'vjs-custom-seek-bar'
+    seekBar.innerHTML = seekBarHtml
+    const parent = document.getElementsByClassName(
+      'vjs-live-control vjs-control'
+    )[0]
+    //@ts-ignore
+    parent.insertBefore(seekBar, parent.firstElementChild?.nextSibling)
+
+    const seekBarRangeEle = document.getElementById('seekbar-range')
 
     /**
      * 이벤트 리스너를 추가해줍니다
@@ -82,6 +101,19 @@ function IVSPlayer({ src, handleQuizEvent }: IVSPlayerProps) {
     ivsPlayer.addEventListener(events.PlayerState.BUFFERING, () => {
       console.log("IVS Player is BUFFERING");
     });
+
+    seekBarRangeEle!.addEventListener('input', function () {
+      //@ts-ignore
+      // player.currentTime(-100)
+      // console.log(player.seekable(), 'seekable')
+      const timeRatio = 60
+      ivsPlayer.seekTo(
+        //@ts-ignore
+        -1 * timeRatio * (100 - parseInt(seekBarRangeEle.value))
+      )
+      // console.log(ivsPlayer.getPosition(), ivsPlayer.getDuration())
+      // ivsPlayer.play()
+    })
     // ENDED 이벤트 핸들러 추가
     ivsPlayer.addEventListener(events.PlayerState.ENDED, () => {
       console.log("IVS Player is ENDED");
@@ -95,9 +127,7 @@ function IVSPlayer({ src, handleQuizEvent }: IVSPlayerProps) {
         console.log("Timed metadata: ", cue.text);
 
         const metadata = JSON.parse(cue.text);
-        if (metadata.type === "quiz" && handleQuizEvent) {
-          handleQuizEvent(cue);
-        }
+      
       }
     );
 

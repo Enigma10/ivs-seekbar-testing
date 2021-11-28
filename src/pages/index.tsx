@@ -1,59 +1,45 @@
-import { useForm } from "react-hook-form";
+import IVSPlayer from "@components/atoms/IVSPlayer";
+import QuizModal from "@components/molecules/QuizModal";
+import useQuiz from "@hooks/useQuiz";
+import useScript from "@hooks/useScript";
 import styled from "styled-components";
-import { ILoginResponse, login } from "@api/auth";
-import Cookies from "universal-cookie";
-import { useRouter } from "next/dist/client/router";
 
 const Wrapper = styled.div`
-  max-width: 360px;
-  margin: 0 auto;
+  width: 100%;
+  min-height: 100vh;
+
   display: flex;
   flex-direction: column;
-`;
-const Form = styled.form`
-  display: flex;
-  flex-direction: column;
-`;
-const SubmitButton = styled.button`
-  margin: 24px 0;
 `;
 
-interface ILoginForm {
-  username: string;
-  password: string;
-}
+/** 라이브 스트리밍 url */
+const playBackUrl = undefined; /** process.env.NEXT_PUBLIC_PLAYBACK_URL; */
 
 export default function Home() {
-  const router = useRouter();
-  const { register, handleSubmit } = useForm<ILoginForm>();
+  const { showQuizModal, quizInfo, handleQuizEvent } = useQuiz();
 
-  const onSubmit = async (data: ILoginForm) => {
-    console.log(data);
+  // Load IVS tech
+  const { loading, error } = useScript({
+    src: "https://player.live-video.net/1.2.0/amazon-ivs-videojs-tech.min.js",
+  });
+  // Load IVS quality plugin
+  const { loading: loadingPlugin, error: pluginError } = useScript({
+    src: "https://player.live-video.net/1.2.0/amazon-ivs-quality-plugin.min.js",
+  });
 
-    try {
-      const { playbackToken }: ILoginResponse = await login();
-      // playbackToken 을 cookie 에 저장한다
-      const cookies = new Cookies();
-      cookies.set("playbackToken", playbackToken, { path: "/" });
+  if (loading || loadingPlugin) {
+    return "loading ivs videojs tech and plugins...";
+  }
 
-      // private video route 로 이동
-      router.push("/privateVideo");
-    } catch (error) {
-      throw error;
-    }
-  };
+  if (error || pluginError) {
+    return "Error!";
+  }
 
   return (
     <Wrapper>
-      <h1>Login</h1>
-      <Form onSubmit={handleSubmit(onSubmit)}>
-        <label>username</label>
-        <input name="username" ref={register} />
-        <br />
-        <label>password</label>
-        <input type="password" name="password" ref={register} />
-        <SubmitButton type="submit">submit</SubmitButton>
-      </Form>
+      {/** IVS 플레이어 */}
+      <IVSPlayer src={playBackUrl} />
+      {/** 퀴즈 모달 */}
     </Wrapper>
   );
 }
